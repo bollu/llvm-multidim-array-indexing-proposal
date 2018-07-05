@@ -1,5 +1,35 @@
 \documentclass{article}
+%% Needs to be here 
+\usepackage{hyperref}
+\usepackage{amssymb}
+
+\title{Array representations for Polly}
+\author{Philip Pfaffe, Siddharth Bhat}
+
 \usepackage[utf8]{inputenc}
 \begin{document}
-(Type your content here.)
+\maketitle
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Terminology}
+\begin{description}
+\item[$Dim(A) \in \mathbb{Z}$] Dimensionality of the array $A$.
+\item[$Size(A, d) \in \mathbb{Z}, 0 \leq d \leq Dim(A)$] Size of the array $A$ in dimension $d$.
+\item[$Pitch(A, d)  \in \lbrack 0,Size(A, d) \rbrack \subset \mathbb{Z}, 0\leq d \leq Dim(A) $] Stride of the array $A$ in dimension $d$.  
+\item[$Offset(A, d), 0\leq d \leq Dim(A), s.t. Offset(A, d) + Size(A, d) \leq Pitch(A, d)$] Offset of the 0 index in dimension $d$.
+\end{description}
+
+For an example array \texttt{A[M][N][O]}: $Dim(\mathtt{A}) = 3, Size(\mathtt{A}) = [M,N,O], Pitch(\mathtt{A}) = [M,N,O]$
+
+\section{Memory model}
+naive memory model. $\texttt{Memory}: \mathbb{Z} \rightarrow \texttt{Value}$. \texttt{Value} is some abstract domain containing values.
+
+
+\begin{align*}
+Store &: \texttt{Memory} \times Z \times \texttt{Value} \rightarrow \texttt{Memory} \\
+Store &(Mem, store_index, val)  = \lambda load_index : Z \rightarrow  
+\end{align*}
 \end{document}
