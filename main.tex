@@ -1,7 +1,9 @@
+
 \documentclass{article}
 %% Needs to be here 
 \usepackage{hyperref}
 \usepackage{amssymb}
+\usepackage{amsmath}
 
 \title{Array representations for Polly}
 \author{Philip Pfaffe, Siddharth Bhat}
@@ -25,11 +27,22 @@
 For an example array \texttt{A[M][N][O]}: $Dim(\mathtt{A}) = 3, Size(\mathtt{A}) = [M,N,O], Pitch(\mathtt{A}) = [M,N,O]$
 
 \section{Memory model}
-naive memory model. $\texttt{Memory}: \mathbb{Z} \rightarrow \texttt{Value}$. \texttt{Value} is some abstract domain containing values.
+naive memory model. $\texttt{Memory}: \mathbb{Z} \rightarrow \texttt{Value}$. \texttt{Value} is some abstract domain containing values. Loading a value from memory is invoking the \texttt{Memory} function at that index.
+
+
+For example, the value of memory at the index $1$ is $M(1)$.
 
 
 \begin{align*}
 Store &: \texttt{Memory} \times Z \times \texttt{Value} \rightarrow \texttt{Memory} \\
-Store &(Mem, store_index, val)  = \lambda load_index : Z \rightarrow  
+Store &(m, storeix, v)  (loadix) = 
+    \begin{cases}
+        v, &\text{if } storeix = loadix \\
+        m(loadix), &\text{otherwise}
+    \end{cases}
 \end{align*}
+
+\section{C style array semantics}
+
+\section{Fortran style array semantics}
 \end{document}
