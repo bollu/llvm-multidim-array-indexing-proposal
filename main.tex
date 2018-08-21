@@ -102,15 +102,76 @@ In the case of a C array, here are the different functions that we have defined:
         \end{align*}
 \end{itemize}
 
-To calculate the index expression, we create a function, $volume(A, d) = |xx|$
+To calculate the index expression, we create a function, $\#elem(A, d) = |ixset(A, d)|$. 
+$\#elem$ measures the number of elements present along a given dimension.
+With this ingredient, we can finally re-create the C array indexing function as:
 
+\paragraph{Sid question: How do you actually \textbf{motivate} this definition?}
+
+\begin{align*}
+    &logicalToPhysical: Array \times \prod_{d=1}^{dim(A)} ixset(A, d) \to \naturals \\
+    &logicalToPhysical(A, (ix_1, ix_2, \dots, ix_{dim(A)})) = \\
+    &\sum_{d=1}^{dim(A)} ix_d \times \prod_{prevd=1}^{d - 1} \#elem(A, prevd)
+\end{align*}
+
+With respect to this formula, we understand that $ix_1$ is the innermost dimension
+with an increment of 1, and $ix_{dim(A)}$ is the outermost dimension.
 \section{Fortran-style arrays: only offset}
+Let us next consider languages which allow us to create arrays with arbitrary
+starting and ending indeces, such as Fortran.
+
+\begin{itemize}
+    \renewcommand\labelitemi{--}
+    \item Declaration: \texttt{T A[$B_1:E_1$][$B_2:E_2$]$\dots$[$B_d:E_d$]}
+    \item Dimension: $dim(A) = d$
+    \item Beginning, ending indeces: $ixbegin(A, d) = B_d$, $ixend(A, d) = E_d$
+    \item Stride: $stride(A, \_) = 1$
+    \item Index set: 
+        \begin{align*}
+            ixset(A, d) &= \{ ixbegin(A, d) + \alpha \cdot stride(A, d)~\vert~ \alpha \in \naturals \} \cap (-\infty, ixend(A, d) ] \\
+                        &= \{ B_d + \alpha \cdot 1~\vert~\alpha \in \naturals \} \cap (-\infty, E_d ] \\
+                        &= [B_d, \infty) \cap (-\infty, E_d]\\
+                        &= [ B_d, E_d]
+        \end{align*}
+\end{itemize}
+
+In this case, the value of  $\#elem(A, d) = E_d - B_d + 1$.
+
+
+\begin{align*}
+    &logicalToPhysical: Array \times \prod_{d=1}^{dim(A)} ixset(A, d) \to \naturals \\
+    &logicalToPhysical(A, (ix_1, ix_2, \dots, ix_{dim(A)})) = \\
+    &\sum_{d=1}^{dim(A)} (ix_d - B_d) \times \prod_{prevd=1}^{d - 1} \#elem(A, prevd)
+\end{align*}
+
 
 \section{Chapel-style arrays: strides and offsets}
 
 \begin{align*}
-    logicalToPhysical(A, (ix_1, ix_2, \dots ix_{dim(A)})) = \sum_{i=1}^{dim(A)} (ix_i / stride(A, i) + offset(A, i)) 
+    &logicalToPhysical: Array \times \prod_{d=1}^{dim(A)} ixset(A, d) \to \naturals \\
+    &logicalToPhysical(A, (ix_1, ix_2, \dots, ix_{dim(A)})) = \\
+    &\sum_{d=1}^{dim(A)} ((ix_d - B_d) / stride(A, i)) \times \prod_{prevd=1}^{d - 1} \#elem(A, prevd)
 \end{align*}
+
+\section{Multidimensional representation for LLVM}
+It seems like we require a lot of information for even a single array:
+that of $dim$, $ixbegin$, $ixend$ and $stride$.  We first show
+to eliminate the requirement of a per-dimension $ixbegin$ and $ixend$. We
+change this information into a per-dimension $\#elem$, and a 
+\textbf{single $offset$ value for an entire array}. We then show
+how we have encoded this representation in two experimental projects -
+one being a fork of LLVM + dragonegg + Polly, and the other a fork of
+LLVM + Chapel + Polly. The first implements this style of indexing in Fortran,
+which is interpreted by Polly for polyhedral optimisation, and the second
+project does the same for Chapel.
+
+We argue that this representation will provide more accurate analysis and
+optimisation opportunities for LLVM, due to the inherent loss in information
+by the linearization performed by \gep. For a detailed reference of 
+the loss of information and the (\textit{necessarily incomplete}) heuristics
+that are used to regain this information, refer to \cite{grosser2015optimistic}
+and \cite{maslov1992delinearization}.
+
 
 
 
@@ -118,9 +179,12 @@ To calculate the index expression, we create a function, $volume(A, d) = |xx|$
 We do not take into account alignment, which is something that must be done
 for this document to be complete.
 
-\section{References}
+\section{References: Links}
+
 \begin{itemize}
     \item \href{https://chapel-lang.org/docs/1.13/_downloads/chapelLanguageSpec.pdf}{The Chapel language specification}.
     \item \href{http://www.j3-fortran.org/doc/year/04/04-007.pdf}{Fortran 2003 standard}.
 \end{itemize}
+\bibliography{references}
+\bibliographystyle{plain}
 \end{document}
