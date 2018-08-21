@@ -5,8 +5,12 @@
 \usepackage{amssymb}
 \usepackage{amsmath}
 
+\newcommand{\gep}{\texttt{getelementptr}}
+\newcommand{\naturals}{\mathbb{N}}
+\newcommand{\integers}{\mathbb{Z}}
+
 \title{Array representations for Polly}
-\author{Philip Pfaffe, Siddharth Bhat}
+\author{(Anonymous)}
 
 \usepackage[utf8]{inputenc}
 \begin{document}
@@ -16,33 +20,107 @@
 \tableofcontents
 \newpage
 
-\section{Terminology}
-\begin{description}
-\item[$Dim(A) \in \mathbb{Z}$] Dimensionality of the array $A$.
-\item[$Size(A, d) \in \mathbb{Z}, 0 \leq d \leq Dim(A)$] Size of the array $A$ in dimension $d$.
-\item[$Pitch(A, d)  \in \lbrack 0,Size(A, d) \rbrack \subset \mathbb{Z}, 0\leq d \leq Dim(A) $] Stride of the array $A$ in dimension $d$.  
-\item[$Offset(A, d), 0\leq d \leq Dim(A), s.t. Offset(A, d) + Size(A, d) \leq Pitch(A, d)$] Offset of the 0 index in dimension $d$.
-\end{description}
+\section{Introduction}
+We mathematically describe the array representations that are used by 
+Fortran and Chapel, two programming languages which support complex array
+indexing. We motivate the need for LLVM to be able to represent these
+array representations and their cooresponding indexing operation at a
+semantic level that is higher than that of \gep.
+We showcase existing implementations of such a semantic representation,
+and would like to propose this as an LLVM standard. Choices for
+implementation are outlined in this document.
 
-For an example array \texttt{A[M][N][O]}: $Dim(\mathtt{A}) = 3, Size(\mathtt{A}) = [M,N,O], Pitch(\mathtt{A}) = [M,N,O]$
+\section{Formalization}
+We first formalize the most general type of array we have encountered - That
+of Chapel style arrays which are multidimensional, strided, and provide
+non-zero-based indexing.
 
-\section{Memory model}
-naive memory model. $\texttt{Memory}: \mathbb{Z} \rightarrow \texttt{Value}$. \texttt{Value} is some abstract domain containing values. Loading a value from memory is invoking the \texttt{Memory} function at that index.
-
-
-For example, the value of memory at the index $1$ is $M(1)$.
-
-
+We denote the set of all possible arrays (a loosely defined term, to be sure)
+as $Array$.
 \begin{align*}
-Store &: \texttt{Memory} \times Z \times \texttt{Value} \rightarrow \texttt{Memory} \\
-Store &(m, storeix, v)  (loadix) = 
-    \begin{cases}
-        v, &\text{if } storeix = loadix \\
-        m(loadix), &\text{otherwise}
-    \end{cases}
+    &dim: Array \to \naturals \\
+    &dim(A) = \text{dimensionality of array $A$}
+    \\
+    \\
+    &ixbegin/ixend: Array \times \lbrack 0, dim(A) \rbrack \to \integers \\
+    &ixbegin/ixend(A, d) = \text{first and last legal indeces allowed along dimension $d$}
+    \\
+    \\
+    &stride: Array \times \lbrack 0, dim(A) \rbrack \to \naturals \\
+    &stride(A, d) = \text{stride of an array $A$ along dimension $d$} \\
 \end{align*}
 
-\section{C style array semantics}
+Using the data outlined above, we can now define what a correct indexing function
+into an array is. An indexing function recieves \textbf{logical coordinates}
+of the array index, which is converted into \textbf{physical coordinates},
+which is the in-memory representation.
 
-\section{Fortran style array semantics}
+We now try to define a partial function $logicalToPhysical$, which maps
+logical coordinates to physical coordinates.
+
+First, we define $ixset(A, d)$, the set of valid indeces along a dimension $d$:
+\begin{align*}
+    &ixset: Array \times \lbrack 0, dim(A) \rbrack \to 2^\naturals\\
+    &ixset(A, d) = \{ ixbegin(A, d) + \alpha \cdot stride(A, d)~\vert~ \alpha \in \naturals \} \cap (-\infty, ixend(A, d) \rbrack
+\end{align*}
+
+The $ixset$ constructs the set of valid indeces that are allowed along
+a given dimension. We first give the type of $logicalToPhysical$, and
+we then gradually build up the full expression.
+
+\begin{align*}
+    logicalToPhysical: Array \times \prod_{d=1}^{dim(A)} ixset(A, d) \to \naturals \\
+\end{align*}
+
+Notice that the logical coordinates live in $\prod_{d=1}^{dim(A)} ixset(A, d)$,
+while physical coordinates live in $\naturals$. We wish to view memory
+as a 1-D sequence of values, with $0$ being the "base address" of the array.
+The logical coordinates allow us to index the "virtual view" of the array
+that we posess.
+
+\section{C-style arrays --- no stride, no offset}
+In the case of C-style arrays, our $ixset(A, i) = \big\lbrack 0, N(A, i) \big) \subset \naturals$,
+where $N(A, i)$ is informally the "size" of array $A$ along dimension $i$.
+The word "size" is, however, fraught with danger, since it conflates
+the size of the "logical indexing space" and the underlying "memory space".
+In the case of the C language, both of these concepts coincide, but this
+is not so in other languages such as Chapel.
+
+In the case of a C array, here are the different functions that we have defined:
+\begin{itemize}
+    \renewcommand\labelitemi{--}
+    \item Declaration: \texttt{T A[$N_1$][$N_2$]$\dots$[$N_d$]}
+    \item Dimension: $dim(A) = d$
+    \item Beginning, ending indeces: $ixbegin(A, \_) = 0$, $ixend(A, d) = N_d - 1$
+    \item Stride: $stride(A, \_) = 1$
+    \item Index set: 
+        \begin{align*}
+            ixset(A, d) &= \{ ixbegin(A, d) + \alpha \cdot stride(A, d)~\vert~ \alpha \in \naturals \} \cap (-\infty, ixend(A, d) ] \\
+                        &= \{ 0 + \alpha \cdot 1~\vert~\alpha \in \naturals \} \cap (-\infty, N_d - 1 \rbrack \\
+                        &= [0, \infty) \cap (-\infty, N_d - 1]\\
+                        &= \lbrack 0, N_d - 1 \rbrack
+        \end{align*}
+\end{itemize}
+
+To calculate the index expression, we create a function, $volume(A, d) = |xx|$
+
+\section{Fortran-style arrays: only offset}
+
+\section{Chapel-style arrays: strides and offsets}
+
+\begin{align*}
+    logicalToPhysical(A, (ix_1, ix_2, \dots ix_{dim(A)})) = \sum_{i=1}^{dim(A)} (ix_i / stride(A, i) + offset(A, i)) 
+\end{align*}
+
+
+
+\section{Caveats}
+We do not take into account alignment, which is something that must be done
+for this document to be complete.
+
+\section{References}
+\begin{itemize}
+    \item \href{https://chapel-lang.org/docs/1.13/_downloads/chapelLanguageSpec.pdf}{The Chapel language specification}.
+    \item \href{http://www.j3-fortran.org/doc/year/04/04-007.pdf}{Fortran 2003 standard}.
+\end{itemize}
 \end{document}
