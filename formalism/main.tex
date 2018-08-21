@@ -153,13 +153,15 @@ In this case, the value of  $\#elem(A, d) = E_d - B_d + 1$.
     &\sum_{d=1}^{dim(A)} ((ix_d - B_d) / stride(A, i)) \times \prod_{prevd=1}^{d - 1} \#elem(A, prevd)
 \end{align*}
 
-\section{Multidimensional representation for LLVM}
+\section{Reduction of representation}
 It seems like we require a lot of information for even a single array:
 that of $dim$, $ixbegin$, $ixend$ and $stride$.  We first show
 to eliminate the requirement of a per-dimension $ixbegin$ and $ixend$. We
 change this information into a per-dimension $\#elem$, and a 
-\textbf{single $offset$ value for an entire array}. We then show
-how we have encoded this representation in two experimental projects -
+\textbf{single $offset$ value for an entire array}. 
+
+\section{Multidimensional representation for LLVM}
+We have encoded the final representation of arrays in two experimental projects -
 one being a fork of LLVM + dragonegg + Polly, and the other a fork of
 LLVM + Chapel + Polly. The first implements this style of indexing in Fortran,
 which is interpreted by Polly for polyhedral optimisation, and the second
@@ -172,8 +174,12 @@ the loss of information and the (\textit{necessarily incomplete}) heuristics
 that are used to regain this information, refer to \cite{grosser2015optimistic}
 and \cite{maslov1992delinearization}.
 
-
-
+\subsection{A "canonical" function call}
+- Takes indeces (which are offset-corrected), number of elements per dimension.
+- Show the universality of this with respect
+\subsection{A new intrinsic}
+\subsection{A new instruction}
+\subsection{Modifying \gep}
 
 \section{Caveats}
 We do not take into account alignment, which is something that must be done

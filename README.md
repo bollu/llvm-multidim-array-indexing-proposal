@@ -1,2 +1,3 @@
-# [Read the pdf](main.pdf)
+# [Read the RFC](RFC.md)
+# [Read the formalism](main.pdf)
 
