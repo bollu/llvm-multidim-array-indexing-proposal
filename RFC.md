@@ -64,7 +64,43 @@ semantics.
 
 
 
-## A second, more involved example of dependence analysis going wrong
+## The request for change: A new instruction, `multidim_array_index`.
+
+We propose the addition of a new instruction, called `multidim_array_index`,
+which allows one to represent such multidimensional array accesses without
+flattening.
+
+
+## Evaluation of the impact of the intrinsic on accuracy of dependence analysis
+- This has been implemented in an exprimental branch of Polly, and was used 
+on the COSMO climate weather model. This greatly helped increase the accuracy
+of Polly's analysis, since we eliminated the guessing game from the array analysis.
+
+- This has also been implemented as part of a GSoC effort to unify
+Chapel and Polly. 
+
+- Molly had this as well (TODO: add references to this.)
+
+## Transitioning to the intrinsic
+
+### Option 1: Allow `multidim_array_index` to refer to a GEP instruction as follows:
+
+```llvm
+i1 foo(... arr):
+    %gep = getelementptr ...
+    %multidim = multidim_array_array(%size0, %size1, %ix0, %ix1, %arr, %gep)
+    %arr.load = load %multidim
+```
+
+We will ensure that calls such as `isGEP` and `dyn_cast<GEP>` will proxy
+through `%gep` to return the correct values. This will ensure that we don't
+lose the current optimiser when trying to teach the optimiser about
+`multidim_array_index`.
+
+### Option 2: Store `multidim_array_index` data using metadata
+
+
+## Appendix: A second, more involved example of dependence analysis going wrong
 
 ```cpp
 // In an array A of size (n0 x n1), 
@@ -129,24 +165,6 @@ guessed is incorrect.
 Ideally, we would like a mechanism to directly express the multidimensional
 semantics, which would eliminate this kind of guesswork from Polly/LLVM,
 which would both make code faster, and easier to analyze.
-
-
-## The request for change: A new instruction, `multidim_array_index`.
-
-We propose the addition of a new instruction, called `multidim_array_index`,
-which allows one to represent such multidimensional array accesses without
-flattening.
-
-
-## Evaluation
-- This has been implemented in an exprimental branch of Polly, and was used 
-on the COSMO climate weather model. This greatly helped increase the accuracy
-of Polly's analysis, since we eliminated the guessing game from the array analysis.
-
-- This has also been implemented as part of a GSoC effort to unify
-Chapel and Polly. 
-
-- Molly had this as well (TODO: add references to this.)
 
 ## References
 - [The chapel language specification](https://chapel-lang.org/docs/1.13/_downloads/chapelLanguageSpec.pdf)
