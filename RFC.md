@@ -81,9 +81,11 @@ Chapel and Polly.
 
 - Molly had this as well (TODO: add references to this.)
 
-## Transitioning to the intrinsic
+# Representations
 
-### Option 1: Allow `multidim_array_index` to refer to a GEP instruction as follows:
+## Instruction / Intrinsic
+
+### Transitioning: Allow `multidim_array_index` to refer to a GEP instruction:
 
 ```llvm
 i1 foo(... arr):
@@ -97,7 +99,9 @@ through `%gep` to return the correct values. This will ensure that we don't
 lose the current optimiser when trying to teach the optimiser about
 `multidim_array_index`.
 
-### Option 2: Store `multidim_array_index` data using metadata
+## Metadata
+
+###  Transitioning:
 
 
 ## Appendix: A second, more involved example of dependence analysis going wrong
