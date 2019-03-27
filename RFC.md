@@ -1,4 +1,14 @@
 # Introducing a new multidimensional array indexing intrinsic
+
+## The request for change: A new instruction, `multidim_array_index`.
+
+We propose the addition of a new instruction, called `multidim_array_index`. 
+This will allow us to represent array indexing into an array `A[d1][d2][..][dk]`
+as `multidim_array_index A d1, d2, d3, ... dk` instead of flattening
+the information into `gep A, d1 * n1 + d2 * n2 + ... + dk * nk`. The former
+unflattened representation is advantageous for analysis and optimisation. It also
+allows us to represent array indexing semantics of languages such as Fortran
+and Chapel, which differs from that of C based array indexing.
 	
 ## Motivating the need for a multi-dimensional array indexing intrinsic
 There are primarily one of two views of array indexing involving
@@ -64,11 +74,6 @@ semantics.
 
 
 
-## The request for change: A new instruction, `multidim_array_index`.
-
-We propose the addition of a new instruction, called `multidim_array_index`,
-which allows one to represent such multidimensional array accesses without
-flattening.
 
 
 ## Evaluation of the impact of the intrinsic on accuracy of dependence analysis
