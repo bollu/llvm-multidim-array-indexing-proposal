@@ -74,9 +74,8 @@ semantics.
 
 
 
-
-
 ## Evaluation of the impact of the intrinsic on accuracy of dependence analysis
+
 - This has been implemented in an exprimental branch of Polly, and was used 
 on the COSMO climate weather model. This greatly helped increase the accuracy
 of Polly's analysis, since we eliminated the guessing game from the array analysis.
@@ -96,7 +95,49 @@ Chapel and Polly.
 
 ## Instruction / Intrinsic
 
-### Transitioning: Allow `multidim_array_index` to refer to a GEP instruction:
+### Syntax
+```
+<result> = multidim_array_index <ty> <ty>* <ptrval> {<stride>, <idx>}*
+```
+
+### Overview:
+The `multidim_array_index` instruction is used to get the address of 
+an element from an array. It performs address calcuation only and 
+does not access memory. It is similar to `getelementptr`. However, it imposes
+additional semantics which allows the optimiser to provide better optimisations
+than `getlementptr`.
+
+
+
+### Arguments:
+The first argument is always a type used as the basis for the calculations. The
+second argument is always a pointer, and is the base address to start the
+calculation from. The remaining arguments are a list of pairs. Each pair
+contains a dimension stride, and an offset with respect to that stride.
+
+
+### Semantics:
+
+`multidim_array_index` represents a multi-dimensional array index, In particular, this will
+mean that we will assume that all strides are non-negative.
+
+
+##### Address computation:
+Consider an invocation of `multidim_array_index`:
+
+```
+<result> = multidim_array_index <ty> <ty>* <ptrval> <str_0>, <idx_0>, <str_1> <idx_1>, ..., <str_n> <idx_n>
+```
+
+If the pairs are denoted by `(str_i, idx_i)`, where `str_i` denotes the stride
+and `idx_i` denotes the index of the ith pair, then the final address (in bytes)
+is computed as:
+
+```
+addressof(ptrval) + len(ty) * [(str_0 * idx_0) + (str_1 * idx_1) + ... (str_n * idx_n)]
+```
+
+## Transitioning to `multidim_array_index`: Allow `multidim_array_index` to refer to a GEP instruction:
 
 ```llvm
 i1 foo(... arr):
@@ -109,10 +150,6 @@ We will ensure that calls such as `isGEP` and `dyn_cast<GEP>` will proxy
 through `%gep` to return the correct values. This will ensure that we don't
 lose the current optimiser when trying to teach the optimiser about
 `multidim_array_index`.
-
-## Metadata
-
-###  Transitioning:
 
 
 ## Appendix: A second, more involved example of dependence analysis going wrong
