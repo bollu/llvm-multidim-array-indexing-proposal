@@ -84,7 +84,13 @@ of Polly's analysis, since we eliminated the guessing game from the array analys
 - This has also been implemented as part of a GSoC effort to unify
 Chapel and Polly. 
 
-- Molly had this as well (TODO: add references to this.)
+- Molly, the distributed version of Polly written by Michael Kruse for his PhD
+  also implemented a similar scheme. In his use-case, guessing as we perform
+  optimistically was not possible, so this kind of intrinsic was _necessary_
+  for the application, not just _good to have_. More details are available
+  in his PhD thesis: [Lattice QCD Optimization and Polytopic Representations of Distributed Memory](https://tel.archives-ouvertes.fr/tel-01078440).
+  In particular, Chapter 9 contains a detailed discussion.
+  (TODO: check up with Michael if there are some other references available as well)
 
 # Representations
 
