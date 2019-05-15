@@ -160,16 +160,17 @@ LLVM has no way of expressing these two different semantics. Hence, we are
 forced to:
 1. Consider flattened 1D accesses, which makes analysis of index expressions
 equivalent to analysis of polynomials over the integers, which is hard.
-2. Guess multidimensional representations, and use them at the express of
+2. Guess multidimensional representations, and use them at the expense of
 soundness bugs as shown above.
 3. Guess multidimensional representations, use them, and check their validity
 at runtime, causing a runtime performance hit.
 
 
-Currently, Polly opts for option (3), which is to emit runtime checks, which
-will cause polly to bail out on the above program on the shown parameter
-configuration, since it detects that the multidimensional view that was
-guessed is incorrect.
+Currently, Polly opts for option (3), which is to emit runtime checks. If
+the run-time checks fail, then Polly will not run its optimised code. Instead,
+It keeps a copy of the unoptimised code around, which is run in this case.
+Note that this effectively doubles the amount of performance-sensitive code
+which is finally emitted after running Polly.
 
 Ideally, we would like a mechanism to directly express the multidimensional
 semantics, which would eliminate this kind of guesswork from Polly/LLVM,
