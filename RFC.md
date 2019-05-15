@@ -169,7 +169,8 @@ equivalent to analysis of polynomials over the integers, which is hard.
 2. Guess multidimensional representations, and use them at the expense of
 soundness bugs as shown above.
 3. Guess multidimensional representations, use them, and check their validity
-at runtime, causing a runtime performance hit.
+at runtime, causing a runtime performance hit. This implementation follows
+the description from the paper [Optimistic Delinearization of Parametrically Sized Arrays](http://delivery.acm.org/10.1145/2760000/2751248/p351-grosser.pdf?ip=93.3.109.183&id=2751248&acc=CHORUS&key=4D4702B0C3E38B35%2E4D4702B0C3E38B35%2E4D4702B0C3E38B35%2E6D218144511F3437&__acm__=1557948443_2f56675c6d04796f27b84593535c9f70).
 
 
 Currently, Polly opts for option (3), which is to emit runtime checks. If
