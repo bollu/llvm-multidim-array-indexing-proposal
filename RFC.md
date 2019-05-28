@@ -119,7 +119,7 @@ contains a dimension stride, and an offset with respect to that stride.
 ### Semantics:
 
 `multidim_array_index` represents a multi-dimensional array index, In particular, this will
-mean that we will assume that all strides are non-negative.
+mean that we will assume that all indeces `<idx_n>` are non-negative.
 
 
 ##### Address computation:
