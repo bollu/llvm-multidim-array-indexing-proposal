@@ -89,7 +89,6 @@ Chapel and Polly.
   for the application, not just _good to have_. More details are available
   in his PhD thesis: [Lattice QCD Optimization and Polytopic Representations of Distributed Memory](https://tel.archives-ouvertes.fr/tel-01078440).
   In particular, Chapter 9 contains a detailed discussion.
-  (TODO: check up with Michael if there are some other references available as well)
 
 # Representations
 
@@ -150,6 +149,14 @@ We will ensure that calls such as `isGEP` and `dyn_cast<GEP>` will proxy
 through `%gep` to return the correct values. This will ensure that we don't
 lose the current optimiser when trying to teach the optimiser about
 `multidim_array_index`.
+
+
+# Caveats
+
+Currently, we assume that the array shape is immutable. However, we will need to deal with 
+being able to express `reshape` like primitives where the array shape can be mutated. However,
+this appears to make expressing this information quite difficult: We now need to attach the shape
+information to an array per "shape-live-range". 
 
 
 ## Appendix: A second, more involved example of dependence analysis going wrong
