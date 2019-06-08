@@ -28,25 +28,29 @@ int ex1(int n, int m, B[n][m], int x1, int x2, int y1, int y2) {
 }
 ```
 
-One would like to infer that since the array indeces _interpreted as tuples_
-`(x1, y1)` and `(x2, y2)` do not alias, due to the guarding asserts
-that `x1 != x2` and `y1 != y2`. the write `B[x1][y1] = 1` can 
+One would like to infer that since the array indices _interpreted as tuples_
+`(x1, y1)` and `(x2, y2)` do not have the same value, due to the guarding asserts
+that `x1 != x2` and `y1 != y2`. The write `B[x1][y1] = 1` can 
 in no way interfere with the value of `B[x2][y2]`. Consquently,
 we can optimise the program into:
 
 
 ```cpp
 int ex1_opt(int n, int m, B[n][m], int x1, int x2, int y1, int y2) {
+    // B[x1][y1] = 1 is omitted because the result 
+    // cannot be used: 
+    //  It is not used in the print and then the program exits
 	printf("%d", B[x2][y2]);
 	exit(0);
 }
 ```
 
-However, alas, this is illegal, for the C language does not provide these
-semantics. It is conceivable that `x1 != x2, y1 != y2`, but the indeces
-do actually alias, since according to C semantics, the two indeces alias
-if the _flattened representation of the indeces alias_. So, in this case,
-pick the parameter values:
+However, alas, this is illegal, for the C language does not provide
+semantics that allow the final inference above. It is conceivable that
+`x1 != x2, y1 != y2`, but the indices do actually alias, since
+according to C semantics, the two indices alias if the _flattened
+representation of the indices alias_. Consider the parameter
+values:
 
 ```
 n = m = 3
@@ -54,12 +58,22 @@ x1 = 1, y1 = 0; B[x1][y1] = nx1+y1 = 3*1+0=3
 x2 = 0, y2 = 3; B[x2][y2] = nx2+y2 = 3*0+3=3
 ```
 
-Hence, the arrays _do alias_, and the transformation proposed in `ex1_opt`
-is unsound in general.
+Hence, the array elements `B[x1][y1]` and `B[x2][y2]` _can alias_, and
+so the transformation proposed in `ex1_opt` is unsound in general.
 
-However, there are languages that provide this "tuple-indexed" semantics,
-where one can infer that the indexing:
+
+In contrast, many langagues other than C require that index
+expressions for multidimensional arrays have each component within the
+array dimension for that component. As a result, in the example above,
+the index pair `(0,3)` would be out-of-bounds. In languages with these
+semantics, one can infer that the indexing:
+
 `[x1][y1] != [x2][y2]` iff `x1 != x2 || y1 != y2`.
+
+While this particular example is not very interesting, it shows the
+spirit of the lack of expressiveness in LLVM we are trying to
+improve. There is a more realistic (and involved) example in 
+[Appendix A](#Appendix-A).
 
 Julia, Fortran, and Chapel are examples of such languages which target
 LLVM.
@@ -84,8 +98,8 @@ of Polly's analysis, since we eliminated the guessing game from the array analys
 Chapel and Polly. 
 
 - Molly, the distributed version of Polly written by Michael Kruse for his PhD
-  also implemented a similar scheme. In his use-case, guessing as we perform
-  optimistically was not possible, so this kind of intrinsic was _necessary_
+  also implemented a similar scheme. In his use-case, optimistic run-time checks
+  with delinearization was not possible, so this kind of intrinsic was _necessary_
   for the application, not just _good to have_. More details are available
   in his PhD thesis: [Lattice QCD Optimization and Polytopic Representations of Distributed Memory](https://tel.archives-ouvertes.fr/tel-01078440).
   In particular, Chapter 9 contains a detailed discussion.
@@ -118,7 +132,7 @@ contains a dimension stride, and an offset with respect to that stride.
 ### Semantics:
 
 `multidim_array_index` represents a multi-dimensional array index, In particular, this will
-mean that we will assume that all indeces `<idx_n>` are non-negative.
+mean that we will assume that all indices `<idx_n>` are non-negative.
 
 
 ##### Address computation:
@@ -159,7 +173,9 @@ this appears to make expressing this information quite difficult: We now need to
 information to an array per "shape-live-range". 
 
 
-## Appendix: A second, more involved example of dependence analysis going wrong
+## Appendix-A
+
+##### A realistic, more involved example of dependence analysis going wrong
 
 ```cpp
 // In an array A of size (n0 x n1), 
@@ -199,12 +215,12 @@ element we will access is at the largest value of `(i, j)`. That is,
 `i = s0 - 1 = 2`, and `j = s1 - 1 = 5`.
 
 The largest index will be `ix(i=2, j=5, n0=8, n1=9, o0=4, o1=6) = 8*2+8*4+5+6=59`.
-Since `59 < 72`, we are clearly at _legal_ array indeces, by C semantics!
+Since `59 < 72`, we are clearly at _legal_ array indices, by C semantics!
 
 The definition of the semantics of the language **changed the illegal
 multidimensional access** (which is illegal since it exceeds the `n1`
 dimension), into a **legal flattened 1D access** (which is legal since the
-flattened array indeces are inbounds).
+flattened array indices are inbounds).
 
 LLVM has no way of expressing these two different semantics. Hence, we are
 forced to:
