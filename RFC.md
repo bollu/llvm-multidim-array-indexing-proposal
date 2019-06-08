@@ -132,7 +132,25 @@ contains a dimension stride, and an offset with respect to that stride.
 ### Semantics:
 
 `multidim_array_index` represents a multi-dimensional array index, In particular, this will
-mean that we will assume that all indices `<idx_n>` are non-negative.
+mean that we will assume that all indices `<idx_i>` are non-negative.
+
+Additionally, we assume that, for each `<str_i>`, `<idx_i>` pair, that 
+`0 <= idx_i < str_i`.
+
+Optimizations can assume that, given two multidim_array_index instructions with matching types:
+
+```
+multidim_array_index <ty> <ty>* <ptrvalA> <strA_1>, <idxA_1>, ..., <strA_N>, <idxA_N>
+multidim_array_index <ty> <ty>* <ptrvalB> <strB_1>, <idxB_1>, ..., <strB_N>, <idxb_N>
+```
+
+If `ptrvalA == ptrvalB` and the strides are equal `(strA_1 == strB_1 && ... && strA_N == strB_N)` then:
+
+- If all the indices are equal (that is, `idxA_1 == idxB_1 && ... && idxA_N == idxB_N`), 
+  then the resulting pointer values are equal.
+
+- If any index value is not equal (that is, there exists an `i` such that `idxA_i != idxB_i`),
+  then the resulting pointer values are not equal.
 
 
 ##### Address computation:
@@ -147,22 +165,38 @@ and `idx_i` denotes the index of the ith pair, then the final address (in bytes)
 is computed as:
 
 ```
-addressof(ptrval) + len(ty) * [(str_0 * idx_0) + (str_1 * idx_1) + ... (str_n * idx_n)]
+ptrval + len(ty) * [(str_0 * idx_0) + (str_1 * idx_1) + ... (str_n * idx_n)]
 ```
 
 ## Transitioning to `multidim_array_index`: Allow `multidim_array_index` to refer to a GEP instruction:
 
-```llvm
-i1 foo(... arr):
-    %gep = getelementptr ...
-    %multidim = multidim_array_array(%size0, %size1, %ix0, %ix1, %arr, %gep)
-    %arr.load = load %multidim
+
+##### Choice 1: Write a `multidim_array_index` to `GEP` pass, with the `GEP` annotated with metadata
+
+This pass will flatten all `multidim_array_index` expressions into a `GEP` annotated with metadata. This metadata will indicate that the index expression computed by the lowered GEP is guaranteed to be in a canonical form which allows the analysis
+to infer stride and index sizes.
+
+A multidim index of the form:
+```
+%arrayidx = multidim_array_index i64 i64* %A, %str_1, %idx_1, %str_2, %idx_2
 ```
 
-We will ensure that calls such as `isGEP` and `dyn_cast<GEP>` will proxy
-through `%gep` to return the correct values. This will ensure that we don't
-lose the current optimiser when trying to teach the optimiser about
-`multidim_array_index`.
+is lowered to:
+
+```
+%mul1 = mul nsw i64 %str_1, %idx_1
+%mul2 = mul1 nsw i64 %str_2, %idx_2
+%total = add nsw i64 %mul2, %mul1
+%arrayidx = getelementptr inbounds i64, i64* %A, i64 %total, !multidim !1
+```
+with guarantees that the first term in each multiplication is the stride
+and the second term in each multiplication is the index. (What happens
+if intermediate transformation passes decide to change the order? This seems
+complicated).
+
+**TODO:** Lookup how to attach metadata such that the metadata can communicate
+which of the values are strides and which are indeces
+
 
 
 # Caveats
@@ -230,7 +264,7 @@ equivalent to analysis of polynomials over the integers, which is hard.
 soundness bugs as shown above.
 3. Guess multidimensional representations, use them, and check their validity
 at runtime, causing a runtime performance hit. This implementation follows
-the description from the paper [Optimistic Delinearization of Parametrically Sized Arrays](http://delivery.acm.org/10.1145/2760000/2751248/p351-grosser.pdf?ip=93.3.109.183&id=2751248&acc=CHORUS&key=4D4702B0C3E38B35%2E4D4702B0C3E38B35%2E4D4702B0C3E38B35%2E6D218144511F3437&__acm__=1557948443_2f56675c6d04796f27b84593535c9f70).
+the description from the paper [Optimistic Delinearization of Parametrically Sized Arrays](optim-delin-parametrically-sized-arrays).
 
 
 Currently, Polly opts for option (3), which is to emit runtime checks. If
@@ -247,4 +281,9 @@ which would both make code faster, and easier to analyze.
 - [The chapel language specification](https://chapel-lang.org/docs/1.13/_downloads/chapelLanguageSpec.pdf)
 - [Fortran 2003 standard](http://www.j3-fortran.org/doc/year/04/04-007.pdf}{Fortran 2003 standard)
 - [C++ subscripting](http://eel.is/c++draft/expr.sub)
-- [Molly's use of the intrinsic](https://github.com/Meinersbur/llvm/blob/molly/include/llvm/IR/IntrinsicsMolly.td#L3)
+- [Michael Kruse's PhD thesis: Lattice QCD Optimization and Polytopic Representations of Distributed Memory](https://tel.archives-ouvertes.fr/tel-01078440).
+- [Molly source code link for the intrinsic](https://github.com/Meinersbur/llvm/blob/molly/include/llvm/IR/IntrinsicsMolly.td#L3)
+-[Optimistic Delinearization of Parametrically Sized Arrays](optim-delin-parametrically-sized-arrays)
+
+[optim-delin-parametrically-sized-arrays]: http://delivery.acm.org/10.1145/2760000/2751248/p351-grosser.pdf?ip=93.3.109.183&id=2751248&acc=CHORUS&key=4D4702B0C3E38B35%2E4D4702B0C3E38B35%2E4D4702B0C3E38B35%2E6D218144511F3437&__acm__=1557948443_2f56675c6d04796f27b84593535c9f70
+
