@@ -28,9 +28,9 @@ int ex1(int n, int m, B[n][m], int x1, int x2, int y1, int y2) {
 }
 ```
 
-One would like to infer that since the array indices _interpreted as tuples_
+One would like to infer that the array indices _interpreted as tuples_
 `(x1, y1)` and `(x2, y2)` do not have the same value, due to the guarding asserts
-that `x1 != x2` and `y1 != y2`. The write `B[x1][y1] = 1` can 
+that `x1 != x2` and `y1 != y2`. As a result, the write `B[x1][y1] = 1` can 
 in no way interfere with the value of `B[x2][y2]`. Consquently,
 we can optimise the program into:
 
@@ -72,8 +72,7 @@ semantics, one can infer that the indexing:
 
 While this particular example is not very interesting, it shows the
 spirit of the lack of expressiveness in LLVM we are trying to
-improve. There is a more realistic (and involved) example in 
-[Appendix A](#Appendix-A).
+improve. 
 
 Julia, Fortran, and Chapel are examples of such languages which target
 LLVM.
@@ -86,7 +85,9 @@ This information must ideally be expressible in LLVM, such that LLVM's optimiser
 alias analysis can use this information to model multidimensional-array
 semantics.
 
-
+There is a more realistic (and involved) example in [Appendix A](#Appendix-A)
+in the same spirit as the above simple example, but one a compiler might
+realistically wish to perform.
 
 ## Evaluation of the impact of the intrinsic on accuracy of dependence analysis
 
@@ -170,6 +171,11 @@ ptrval + len(ty) * [(str_0 * idx_0) + (str_1 * idx_1) + ... (str_n * idx_n)]
 
 ## Transitioning to `multidim_array_index`: Allow `multidim_array_index` to refer to a GEP instruction:
 
+This is a sketch of how we might gradually introduce the `multidim_array_index`
+intrinsic into LLVM without immediately losing the analyses
+that are performed on `getelememtptr` instructions. This section
+lists out some possible choices that we have, since the authors
+do not have a "best" solution.
 
 ##### Choice 1: Write a `multidim_array_index` to `GEP` pass, with the `GEP` annotated with metadata
 
