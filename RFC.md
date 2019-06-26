@@ -227,8 +227,8 @@ void set_subarray(unsigned n0, unsigned n1,
 We first reduce this index expression to a sum of products:
 
 ```
-(i + o0) * n0 + (j + o1) = n0i + n0o0 + j + o1
-ix(i, j, n0, n1, o0, o1) = n0i + n0o0 + j + o1
+(i + o0) * n1 + (j + o1) = n1i + n1o0 + j + o1
+ix(i, j, n0, n1, o0, o1) = n1i + n1o0 + j + o1
 ```
 
 `ix` is the index expression which `LLVM` will see, since it is fully
