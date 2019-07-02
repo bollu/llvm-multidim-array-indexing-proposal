@@ -20,8 +20,8 @@ dependence analysis, so the examples here will focus on that particular problem.
 Let us consider an array indexing operation of the form:
 ```cpp
 int ex1(int n, int m, B[n][m], int x1, int x2, int y1, int y2) {
-	assert(x1 != x2);
-	assert(y1 != y2);
+	__builtin_assume(x1 != x2);
+	__builtin_assume(y1 != y2);
 	B[x1][y1] = 1;
 	printf("%d", B[x2][y2]);
 	exit(0);
