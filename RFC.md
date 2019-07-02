@@ -1,8 +1,8 @@
 # Introducing a new multidimensional array indexing intrinsic
 
-## The request for change: A new instruction, `multidim_array_index`.
+## The request for change: A new intrinsic, `multidim_array_index`.
 
-We propose the addition of a new instruction, called `multidim_array_index`. 
+We propose the addition of a new intrinsic, called `multidim_array_index`. 
 This will allow us to represent array indexing into an array `A[d1][d2][..][dk]`
 as `multidim_array_index A d1, d2, d3, ... dk` instead of flattening
 the information into `gep A, d1 * n1 + d2 * n2 + ... + dk * nk`. The former
@@ -107,7 +107,7 @@ Chapel and Polly.
 
 # Representations
 
-## Instruction / Intrinsic
+## Intrinsic
 
 ### Syntax
 ```
@@ -115,7 +115,7 @@ Chapel and Polly.
 ```
 
 ### Overview:
-The `multidim_array_index` instruction is used to get the address of 
+The `multidim_array_index` intrinsic is used to get the address of 
 an element from an array. It performs address calcuation only and 
 does not access memory. It is similar to `getelementptr`. However, it imposes
 additional semantics which allows the optimiser to provide better optimisations
