@@ -1,10 +1,10 @@
 # Introducing a new multidimensional array indexing intrinsic
 
-## The request for change: A new intrinsic, `multidim_array_index`.
+## The request for change: A new intrinsic, `llvm.multidim.array.index.*`.
 
-We propose the addition of a new intrinsic, called `multidim_array_index`. 
+We propose the addition of a new family of intrinsics, `llvm.multidim.array.index.*`. 
 This will allow us to represent array indexing into an array `A[d1][d2][..][dk]`
-as `multidim_array_index A d1, d2, d3, ... dk` instead of flattening
+as `llvm.multidim.array.index.k A d1, d2, d3, ... dk` instead of flattening
 the information into `gep A, d1 * n1 + d2 * n2 + ... + dk * nk`. The former
 unflattened representation is advantageous for analysis and optimisation. It also
 allows us to represent array indexing semantics of languages such as Fortran
@@ -111,11 +111,12 @@ Chapel and Polly.
 
 ### Syntax
 ```
-<result> = multidim_array_index <ty> <ty>* <ptrval> {<stride>, <idx>}*
+<result> = llvm.multidim.array.index.* <ty> <ty>* <ptrval> {<stride>, <idx>}*
 ```
 
 ### Overview:
-The `multidim_array_index` intrinsic is used to get the address of 
+
+The `llvm.multidim.array.index.*` intrinsic is used to get the address of 
 an element from an array. It performs address calcuation only and 
 does not access memory. It is similar to `getelementptr`. However, it imposes
 additional semantics which allows the optimiser to provide better optimisations
@@ -124,6 +125,7 @@ than `getlementptr`.
 
 
 ### Arguments:
+
 The first argument is always a type used as the basis for the calculations. The
 second argument is always a pointer, and is the base address to start the
 calculation from. The remaining arguments are a list of pairs. Each pair
@@ -132,17 +134,17 @@ contains a dimension stride, and an offset with respect to that stride.
 
 ### Semantics:
 
-`multidim_array_index` represents a multi-dimensional array index, In particular, this will
+`llvm.multidim.array.index.*` represents a multi-dimensional array index, In particular, this will
 mean that we will assume that all indices `<idx_i>` are non-negative.
 
 Additionally, we assume that, for each `<str_i>`, `<idx_i>` pair, that 
 `0 <= idx_i < str_i`.
 
-Optimizations can assume that, given two multidim_array_index instructions with matching types:
+Optimizations can assume that, given two llvm.multidim.array.index.* instructions with matching types:
 
 ```
-multidim_array_index <ty> <ty>* <ptrvalA> <strA_1>, <idxA_1>, ..., <strA_N>, <idxA_N>
-multidim_array_index <ty> <ty>* <ptrvalB> <strB_1>, <idxB_1>, ..., <strB_N>, <idxb_N>
+llvm.multidim.array.index.* <ty> <ty>* <ptrvalA> <strA_1>, <idxA_1>, ..., <strA_N>, <idxA_N>
+llvm.multidim.array.index.* <ty> <ty>* <ptrvalB> <strB_1>, <idxB_1>, ..., <strB_N>, <idxb_N>
 ```
 
 If `ptrvalA == ptrvalB` and the strides are equal `(strA_1 == strB_1 && ... && strA_N == strB_N)` then:
@@ -155,10 +157,10 @@ If `ptrvalA == ptrvalB` and the strides are equal `(strA_1 == strB_1 && ... && s
 
 
 ##### Address computation:
-Consider an invocation of `multidim_array_index`:
+Consider an invocation of `llvm.multidim.array.index.*`:
 
 ```
-<result> = multidim_array_index <ty> <ty>* <ptrval> <str_0>, <idx_0>, <str_1> <idx_1>, ..., <str_n> <idx_n>
+<result> = call @llvm.multidim.array.index.* <ty> <ty>* <ptrval> <str_0>, <idx_0>, <str_1> <idx_1>, ..., <str_n> <idx_n>
 ```
 
 If the pairs are denoted by `(str_i, idx_i)`, where `str_i` denotes the stride
@@ -169,22 +171,22 @@ is computed as:
 ptrval + len(ty) * [(str_0 * idx_0) + (str_1 * idx_1) + ... (str_n * idx_n)]
 ```
 
-## Transitioning to `multidim_array_index`: Allow `multidim_array_index` to refer to a GEP instruction:
+## Transitioning to `llvm.multidim.array.index.*`: Allow `multidim_array_index` to refer to a GEP instruction:
 
-This is a sketch of how we might gradually introduce the `multidim_array_index`
+This is a sketch of how we might gradually introduce the `llvm.multidim.array.index.*`
 intrinsic into LLVM without immediately losing the analyses
 that are performed on `getelememtptr` instructions. This section
 lists out some possible choices that we have, since the authors
 do not have a "best" solution.
 
-##### Choice 1: Write a `multidim_array_index` to `GEP` pass, with the `GEP` annotated with metadata
+##### Choice 1: Write a `llvm.multidim.array.index.*` to `GEP` pass, with the `GEP` annotated with metadata
 
-This pass will flatten all `multidim_array_index` expressions into a `GEP` annotated with metadata. This metadata will indicate that the index expression computed by the lowered GEP is guaranteed to be in a canonical form which allows the analysis
+This pass will flatten all `llvm.multidim.array.index.*` expressions into a `GEP` annotated with metadata. This metadata will indicate that the index expression computed by the lowered GEP is guaranteed to be in a canonical form which allows the analysis
 to infer stride and index sizes.
 
 A multidim index of the form:
 ```
-%arrayidx = multidim_array_index i64 i64* %A, %str_1, %idx_1, %str_2, %idx_2
+%arrayidx = llvm.multidim.array.index.* i64 i64* %A, %str_1, %idx_1, %str_2, %idx_2
 ```
 
 is lowered to:
