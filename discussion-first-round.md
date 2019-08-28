@@ -31,23 +31,20 @@ addition to the naive computation, such as:
 
     %offset1= mul i64. %i, %n
     %offset2 = add i64, %j, %offset1
-    %1 = getelementptr double, double* %A, inrange i64 %offset2 [
-"multi-dim"(i64 %n) ]
+    %1 = getelementptr double, double* %A, inrange i64 %offset2 [ "multi-dim"(i64 %n) ]
 
-This was not obvious to me. The code above uses operand bundle syntax.
-During our discussing for this RFC we briefly discussed metadata,
-which unfortunately do not allow referencing local SSA values.
+The code above uses operand bundle syntax.  During our discussing for this RFC
+we briefly discussed metadata, which unfortunately do not allow referencing
+local SSA values.
 
 
-3.
-For completeness, here is Johannes other suggestion without modifying
+3.  For completeness, here is Johannes other suggestion without modifying
 GEP/Load/Store:
 
     %offset1= mul i64. %i, %n
     %offset2= add i64, %j, %offset1
     %1 = getelementptr double, double* %A, inrange i64 %offset2
-    %2 = llvm.multidim.access.pdouble.pdouble.i64.i64.i64.i64(double*
-%A, i64 %n, i64 %m, i64 %i, i64 %j)
+    %2 = llvm.multidim.access.pdouble.pdouble.i64.i64.i64.i64(double* %A, i64 %n, i64 %m, i64 %i, i64 %j)
     %cmp = icmp eq %1, %2
     call void @llvm.assume(i1 %cmp)
 
