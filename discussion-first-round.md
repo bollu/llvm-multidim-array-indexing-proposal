@@ -6,7 +6,9 @@
 The most obvious why for me was changing GEP to allow variable-sized
 multi-dimensional arrays in the first argument, such as
 
-    %1 = getelementptr double, double* %ptr, inrange i64 %i, inrange i64 %j
+```
+%1 = getelementptr double, double* %ptr, inrange i64 %i, inrange i64 %j
+```
 
 (normally GEP would only allow a single index argument for a
 pointer-typed base pointer).
@@ -14,8 +16,9 @@ Since %A has variable size, there is not enough information to compute
 the result, we need to pass at least the stride of the innermost
 dimension, such as:
 
-    %1 = getelementptr double, double* %A, inrange i64 %i, inrange i64
-%j, i64 %n
+```
+%1 = getelementptr double, double* %A, inrange i64 %i, inrange i64 %j, i64 %n
+```
 
 It should be clear that this breaks a lot of assumptions then went
 into writing code that handle GEPs, not only the number of arguments
@@ -25,28 +28,30 @@ GEP. I think it is unfeasible to change all code to properly handle
 the new form at once.
 
 
-2.
-Johannes' interpretation is to add some kind of metadata to GEPs, in
+2.  Johannes' interpretation is to add some kind of metadata to GEPs, in
 addition to the naive computation, such as:
 
-    %offset1= mul i64. %i, %n
-    %offset2 = add i64, %j, %offset1
-    %1 = getelementptr double, double* %A, inrange i64 %offset2 [ "multi-dim"(i64 %n) ]
+```
+%offset1= mul i64. %i, %n
+%offset2 = add i64, %j, %offset1
+%1 = getelementptr double, double* %A, inrange i64 %offset2 [ "multi-dim"(i64 %n) ]
+```
 
 The code above uses operand bundle syntax.  During our discussing for this RFC
 we briefly discussed metadata, which unfortunately do not allow referencing
 local SSA values.
 
 
-3.  For completeness, here is Johannes other suggestion without modifying
-GEP/Load/Store:
+3.  For completeness, here is Johannes other suggestion without modifying GEP/Load/Store: 
 
-    %offset1= mul i64. %i, %n
-    %offset2= add i64, %j, %offset1
-    %1 = getelementptr double, double* %A, inrange i64 %offset2
-    %2 = llvm.multidim.access.pdouble.pdouble.i64.i64.i64.i64(double* %A, i64 %n, i64 %m, i64 %i, i64 %j)
-    %cmp = icmp eq %1, %2
-    call void @llvm.assume(i1 %cmp)
+```
+%offset1= mul i64. %i, %n
+%offset2= add i64, %j, %offset1
+%1 = getelementptr double, double* %A, inrange i64 %offset2
+%2 = llvm.multidim.access.pdouble.pdouble.i64.i64.i64.i64(double* %A, i64 %n, i64 %m, i64 %i, i64 %j)
+%cmp = icmp eq %1, %2
+call void @llvm.assume(i1 %cmp)
+```
 
 
 ### Type-system issues with keeping it as an intrinsic
@@ -115,24 +120,29 @@ fundamentals. Do you think it would be worth it? -- (Michael Kruse)
 ### Summary by Johannes
 
 Access-centric:
- - new "operand/metadata" to encode the multi-dim coordinate:
-     %coord_3D = llvm.coord.3d(%N, %M, %K, %i, %j, %p)
-     %val = load %p, [coord] %coord_3D
-   Benefits: pointer computation is not disturbed, even if it is
-             transformed, e.g., part of the pointer computation is
-             hoisted and coalesced. Annotated operations are known to
-             be UB if the bounds are violated.
-   Caveats: New load operand need to be hidden, e.g., as operand bundle
-   operands for calls. Alternatively, coord can be passed as metadata.
- - new "operand/metadata" to encode a shape:
-     %shape_3D = llvm.shape.3d(%N, %M, %K)
-     %val = load %p, [shape] %shape_3D
-   Benefits: see above. When a shape and `inrange` is provided it
-             applies to all dimensions of the shape.
-   Caveats: see above. Reconstruction of coordinate needs to happen
-            still. Though, statically complex parts, e.g., guessing the
-            shape and computing when offsets would be "out-of-range",
-            is much simpler.
+ - Use new "operand/metadata" to encode the multi-dim coordinate:
+ ```
+ %coord_3D = llvm.coord.3d(%N, %M, %K, %i, %j, %p)
+ %val = load %p, [coord] %coord_3D
+ ```
+
+**Benefits:**pointer computation is not disturbed, even if it is transformed,
+e.g., part of the pointer computation is hoisted and coalesced. Annotated
+operations are known to be UB if the bounds are violated.
+
+**Caveats:**New load operand need to be hidden, e.g., as operand bundle
+operands for calls. Alternatively, coord can be passed as metadata.
+
+ - Use new "operand/metadata" to encode a shape:
+```
+ %shape_3D = llvm.shape.3d(%N, %M, %K)
+ %val = load %p, [shape] %shape_3D
+```
+
+**Benefits:**see above. When a shape and `inrange` is provided it applies to all dimensions of the shape.
+**Caveats:** see above. Reconstruction of coordinate needs to happen still.
+Though, statically complex parts, e.g., guessing the shape and computing when
+offsets would be "out-of-range", is much simpler.
 
 Type-based:
  - Have multi-dimensional variable sized arrays. This was discussed in
@@ -141,5 +151,4 @@ Type-based:
 GEP-centric:
  - an intrinsic-based solutions applied to GEPs
  - add the multi-dim coordinate inputs directly to GEPs (no intrinsic)
- - build the coordinate as above and assume it equal to the GEP:
-     call @llvm.assume(icmp eq %gep, %coord_3D)
+ - build the coordinate as above and assume it equal to the GEP: `call @llvm.assume(icmp eq %gep, %coord_3D)`
