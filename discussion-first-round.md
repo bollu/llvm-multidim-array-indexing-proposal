@@ -126,11 +126,12 @@ Access-centric:
  %val = load %p, [coord] %coord_3D
  ```
 
-**Benefits:**pointer computation is not disturbed, even if it is transformed,
+**Benefits:** pointer computation is not disturbed, even if it is transformed,
 e.g., part of the pointer computation is hoisted and coalesced. Annotated
 operations are known to be UB if the bounds are violated.
 
-**Caveats:**New load operand need to be hidden, e.g., as operand bundle
+
+**Caveats:** New load operand need to be hidden, e.g., as operand bundle
 operands for calls. Alternatively, coord can be passed as metadata.
 
  - Use new "operand/metadata" to encode a shape:
@@ -139,7 +140,9 @@ operands for calls. Alternatively, coord can be passed as metadata.
  %val = load %p, [shape] %shape_3D
 ```
 
-**Benefits:**see above. When a shape and `inrange` is provided it applies to all dimensions of the shape.
+**Benefits:** see above. When a shape and `inrange` is provided it applies to all dimensions of the shape.
+
+
 **Caveats:** see above. Reconstruction of coordinate needs to happen still.
 Though, statically complex parts, e.g., guessing the shape and computing when
 offsets would be "out-of-range", is much simpler.
