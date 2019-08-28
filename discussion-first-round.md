@@ -110,9 +110,9 @@ where the `void*` informs us nothing about the element size...
 - IMHO the issue is representation since LLVM-IR does not have the
 primitives that MLIR has, specifically there is no Memref type that --
 in contrast to LLVM-IR pointer types are multi-dimensional, and -- in
-contrast to LLVM-IR array types can have dependent and dynamic shape.
+contrast to LLVM-IR array types can have dependent and dynamic shape. --- (Chris Lattner)
 
-Adding a MemRef type this would go quite deep into LLVM-IR
+- Adding a MemRef type this would go quite deep into LLVM-IR
 fundamentals. Do you think it would be worth it? -- (Michael Kruse)
 
 
