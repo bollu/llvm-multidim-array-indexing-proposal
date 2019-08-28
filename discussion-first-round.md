@@ -6,7 +6,7 @@
 The most obvious why for me was changing GEP to allow variable-sized
 multi-dimensional arrays in the first argument, such as
 
-```
+```llvm
 %1 = getelementptr double, double* %ptr, inrange i64 %i, inrange i64 %j
 ```
 
@@ -16,7 +16,7 @@ Since %A has variable size, there is not enough information to compute
 the result, we need to pass at least the stride of the innermost
 dimension, such as:
 
-```
+```llvm
 %1 = getelementptr double, double* %A, inrange i64 %i, inrange i64 %j, i64 %n
 ```
 
@@ -31,7 +31,7 @@ the new form at once.
 2.  Johannes' interpretation is to add some kind of metadata to GEPs, in
 addition to the naive computation, such as:
 
-```
+```llvm
 %offset1= mul i64. %i, %n
 %offset2 = add i64, %j, %offset1
 %1 = getelementptr double, double* %A, inrange i64 %offset2 [ "multi-dim"(i64 %n) ]
@@ -44,7 +44,7 @@ local SSA values.
 
 3.  For completeness, here is Johannes other suggestion without modifying GEP/Load/Store: 
 
-```
+```llvm
 %offset1= mul i64. %i, %n
 %offset2= add i64, %j, %offset1
 %1 = getelementptr double, double* %A, inrange i64 %offset2
@@ -58,13 +58,13 @@ call void @llvm.assume(i1 %cmp)
 
 ##### Kaylor, Andrew's concern about the type system validity of the intrinsic
 
-```
+```llvm
 <result> = llvm.multidim.array.index.* <ty> <ty>* <ptrval> {<stride>, <idx>}*
 ```
 
 It isn't clear to me what that means. The later example is also in a somewhat generalized form:
 
-```
+```llvm
 %arrayidx = llvm.multidim.array.index.* i64 i64* %A, %str_1, %idx_1, %str_2, %idx_2
 ```
 
@@ -79,8 +79,9 @@ pointer's lose their pointee type.
 
 That is, given opaque pointers, the above will convert to:
 
-```
-%arrayidx = call i64 @llvm.multidim.array.index.i64.p0.i64.i64.i64.i64 void* %A, i64 %str_1, i64 %idx_1, i64 %str_2, i64 %idx_2
+```llvm
+%arrayidx = call i64 @llvm.multidim.array.index.i64.p0.i64.i64.i64.i64 
+    void* %A, i64 %str_1, i64 %idx_1, i64 %str_2, i64 %idx_2
 ```
 
 where the `void*` informs us nothing about the element size...
@@ -93,23 +94,23 @@ where the `void*` informs us nothing about the element size...
 
 ### Should this even be an intrinsic? 
 
-> Apart from all that, I'm pretty disappointed to see this as an
-> intrinsic though. GEP is such a fundamental part of addressing in LLVM
-> that bifurcating it into an intrinsic for either a language or an
-> analysis seems like we'd be papering over a language deficiency. --- (Tim Northover)
+Apart from all that, I'm pretty disappointed to see this as an
+intrinsic though. GEP is such a fundamental part of addressing in LLVM
+that bifurcating it into an intrinsic for either a language or an
+analysis seems like we'd be papering over a language deficiency. --- (Tim Northover)
 
 
-> Adding ‘experiemental’ intrinsics is cheap and easy, so if you think this
-> direction has promise, I’d recommend starting with that, building out the
-> optimizers that you expect to work and measure them in practice --- (Chris Lattner)
+Adding ‘experiemental’ intrinsics is cheap and easy, so if you think this
+direction has promise, I’d recommend starting with that, building out the
+optimizers that you expect to work and measure them in practice --- (Chris Lattner)
 
 
 
 ### Beg, Borrow, Steal from MLIR
 
 - IMHO the issue is representation since LLVM-IR does not have the
-primitives that MLIR has, specifically there is no Memref type that --
-in contrast to LLVM-IR pointer types are multi-dimensional, and -- in
+primitives that MLIR has, specifically there is no Memref type that
+in contrast to LLVM-IR pointer types are multi-dimensional, and in
 contrast to LLVM-IR array types can have dependent and dynamic shape. --- (Chris Lattner)
 
 - Adding a MemRef type this would go quite deep into LLVM-IR
@@ -154,4 +155,5 @@ Type-based:
 GEP-centric:
  - an intrinsic-based solutions applied to GEPs
  - add the multi-dim coordinate inputs directly to GEPs (no intrinsic)
- - build the coordinate as above and assume it equal to the GEP: `call @llvm.assume(icmp eq %gep, %coord_3D)`
+ - build the coordinate as above and assume it equal to the GEP: 
+    `call @llvm.assume(icmp eq %gep, %coord_3D)`
