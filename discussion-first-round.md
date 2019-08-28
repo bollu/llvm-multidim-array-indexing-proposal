@@ -1,6 +1,6 @@
 # Collection of first round of discussion points from the mailing list about the RFC
 
-### Arguments for extending GEP:
+### Arguments for extending GEP (As summarised by Michael Kruse):
 
 
 The most obvious why for me was changing GEP to allow variable-sized
